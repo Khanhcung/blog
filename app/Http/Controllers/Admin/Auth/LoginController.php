@@ -58,14 +58,34 @@ class LoginController extends Controller
     protected function credentials(Request $request)
     {   
         $admin = admin::where('email',$request->email)->first();
-        if (count($admin)) {
+        if ($admin) { 
             if ($admin->status == 0) {
                 return ['email'=>'inactive','password'=>'You are not an active person, please contact Admin'];
             }else{
                 return ['email'=>$request->email,'password'=>$request->password,'status'=>1];
             }
+           
         }
         return $request->only($this->username(), 'password');
+    }
+
+    protected function sendFailedLoginResponse(Request $request)
+    {
+        //$errors = [$this->username() => trans('auth.failed')];
+        $fields = $this->credentials($request);
+        if ($fields['email'] == 'inactive') {
+            $errors= $fields['password'];
+        }
+        else{
+            $errors = [$this->username() => trans('auth.failed')];
+        }
+        if ($request->expectsJson()) {
+            return response()->json($errors, 422);
+        }
+
+        return redirect()->back()
+            ->withInput($request->only($this->username(), 'remember'))
+            ->withErrors($errors);
     }
 
     public function __construct()
